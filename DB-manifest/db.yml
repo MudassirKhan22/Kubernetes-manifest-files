@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db
+  labels:
+    app: mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      name: DB-pods
+      labels:
+        app: mysql
+    spec:
+      terminationGracePeriodSeconds: 10
+      imagePullSecrets:
+        - name: ecr-key2
+      volumes:
+        - name: mysql-store1
+          persistentVolumeClaim:
+            claimName: mysql-pvc1
+        - name: mysql-store2
+          persistentVolumeClaim:
+            claimName: mysql-pvc2
+      containers:
+        - name: db-ctr1   # For the first Container
+          image: 629008889621.dkr.ecr.ap-south-1.amazonaws.com/db:12 # Replace with the actual MySQL image
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: my-secret
+                  key: MYSQL_ROOT_PASSWORD
+            - name: MYSQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: my-configmap
+                  key: MYSQL_DATABASE
+          volumeMounts:
+            - name: mysql-store1
+              mountPath: /var/lib/mysql
+        # - name: db-ctr2  # For the second Container
+        #   image: 629008889621.dkr.ecr.ap-south-1.amazonaws.com/db:12 # Replace with the actual MySQL image
+        #   imagePullPolicy: Always
+        #   ports:
+        #     - containerPort: 3306
+        #   env:
+        #     - name: MYSQL_ROOT_PASSWORD
+        #       valueFrom:
+        #         secretKeyRef:
+        #           name: my-secret
+        #           key: MYSQL_ROOT_PASSWORD
+        #     - name: MYSQL_DATABASE
+        #       valueFrom:
+        #         configMapKeyRef:
+        #           name: my-configmap
+        #           key: MYSQL_DATABASE
+        #   volumeMounts:
+        #     - name: mysql-store2
+        #       mountPath: /var/lib/mysql
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-svc
+spec:
+  selector:
+    app: mysql
+  ports:
+    - port: 3306
+  type: ClusterIP
